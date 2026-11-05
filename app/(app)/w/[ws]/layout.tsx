@@ -9,7 +9,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const supabase = await createClient();
   const { data: business } = await supabase.from("businesses").select("id, name").eq("id", ws).maybeSingle();
   if (!business) notFound();
-  const nav = [["Clients", "clients"], ["Briefs", "briefs"], ["Estimates", "estimates"]] as const;
+  const nav = [["Clients", "clients"], ["Briefs", "briefs"], ["Estimates", "estimates"], ["Projects", "projects"], ["Timesheet", "time"]] as const;
   return (
     <div className="min-h-screen md:flex">
       <aside className="border-b border-line bg-white p-4 md:w-56 md:border-b-0 md:border-r">

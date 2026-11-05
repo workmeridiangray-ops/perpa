@@ -3,15 +3,20 @@
 Multi-company ERP for agencies, studios and consultancies, built from the
 *Professional Services Agency ERP SaaS* scope. Next.js + Supabase (Postgres, Auth, RLS).
 
-**Status: Phase 1 foundation.** Built: sign-in, workspace (business) switching, business/branch/membership
-model, roles (owner, manager, staff, customer), client directory and contacts, briefs with open questions,
-effective-dated bill and cost rates, versioned estimates with internal cost kept separate, approval,
-acceptance by an authorised contact, engagements from accepted revisions, append-only audit log.
+**Status: Phase 2.** Built: everything in Phase 1 (workspaces, roles, RLS, clients, briefs, rates,
+versioned estimates, acceptance, engagements, audit) plus:
+
+- Estimate screen: add/remove lines, discount, submit → approve → send → record acceptance → create
+  engagement and project, new revisions. Internal cost and margin appear only to owner/manager.
+- Brief creation, projects list, timesheet (log, submit, manager approve/reject with reason).
+- Database: projects, resources, allocations (tentative/confirmed, over-capacity needs an override reason),
+  timesheets (16h/day cap, no self-approval, approved time immutable, adjustments with reason, locked
+  billing periods).
 
 **Not built yet** (per the scope): subscriptions/plans and platform super admin, public marketing site,
-invitations/2FA, client portal, projects and change control, capacity, timesheets, expenses/freelancers,
-retainers, billing and receivables, profitability, imports/integrations. The estimate editor UI is not
-built; estimates are created and managed through the database functions and covered by tests.
+invitations/2FA, client portal, change control and milestones, capacity calendar UI, expenses and freelancers,
+retainers, billing and receivables, profitability reports, imports/integrations, notifications.
+Screens were checked by type-check and build only; they have not been exercised in a browser.
 
 ## Rules enforced in the database (see `supabase/migrations/`)
 - Every business-owned row carries `business_id`; RLS scopes all reads and writes. Composite foreign keys
