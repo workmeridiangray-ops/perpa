@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 /** Membership is enforced by RLS: a business the user does not belong to simply returns no row. */
@@ -9,7 +9,11 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const supabase = await createClient();
   const { data: business } = await supabase.from("businesses").select("id, name").eq("id", ws).maybeSingle();
   if (!business) notFound();
-  const nav = [["Clients", "clients"], ["Briefs", "briefs"], ["Estimates", "estimates"], ["Projects", "projects"], ["Timesheet", "time"]] as const;
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("memberships").select("role").eq("business_id", ws).eq("user_id", user?.id ?? "").eq("status", "active").maybeSingle();
+  if (!me) notFound();
+  if (me.role === "customer") redirect("/portal"); // clients use the portal, not the back office
+  const nav = [["Clients", "clients"], ["Briefs", "briefs"], ["Estimates", "estimates"], ["Projects", "projects"], ["Timesheet", "time"], ["Capacity", "capacity"], ["Expenses", "expenses"], ["Invoices", "invoices"], ["Retainers", "retainers"], ["Team", "team"]] as const;
   return (
     <div className="min-h-screen md:flex">
       <aside className="border-b border-line bg-white p-4 md:w-56 md:border-b-0 md:border-r">

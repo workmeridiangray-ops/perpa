@@ -16,3 +16,14 @@ describe("permissions", () => {
     expect(can("owner", "member.manage")).toBe(true);
   });
 });
+
+import { safeNext } from "./routing";
+describe("safeNext", () => {
+  it("allows only same-site relative paths", () => {
+    expect(safeNext("/invite/abc")).toBe("/invite/abc");
+    expect(safeNext("//evil.com")).toBe("/workspaces");
+    expect(safeNext("https://evil.com")).toBe("/workspaces");
+    expect(safeNext("/\\evil.com")).toBe("/workspaces");
+    expect(safeNext(null)).toBe("/workspaces");
+  });
+});
