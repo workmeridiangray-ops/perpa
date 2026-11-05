@@ -11,7 +11,7 @@ describe("allocations", () => {
     await as("managerA", async (q, raw) => {
       const { prj, res } = await project(raw);
       const mk = (status: string, mins: number, reason: string | null = null) =>
-        q("insert into allocations (business_id,project_id,resource_id,starts_on,ends_on,minutes_per_day,status,override_reason) values ($1,$2,$3,'2026-12-01','2026-12-05',$4,$5,$6)", [A, prj, res, mins, status, reason]);
+        q("insert into allocations (business_id,project_id,resource_id,starts_on,ends_on,minutes_per_day,status,override_reason) values ($1,$2,$3,'2026-12-01','2026-12-04',$4,$5,$6)", [A, prj, res, mins, status, reason]);
       await mk("confirmed", 300);
       await mk("tentative", 400); // fine
       await fails(q, "insert into allocations (business_id,project_id,resource_id,starts_on,ends_on,minutes_per_day,status) values ($1,$2,$3,'2026-12-03','2026-12-04',300,'confirmed')", [A, prj, res]);

@@ -28,7 +28,7 @@ describe("scope acceptance flow", () => {
       const prj = (await q("select public.start_project($1) as id", [eng])).rows[0].id;
       // Capacity: a resource for staff, role Designer; confirmed booking.
       const res = (await q("insert into resources (business_id,user_id,name,role_label) values ($1,$2,'Sam','Designer') returning id", [A, U.staffA])).rows[0].id;
-      await q("insert into allocations (business_id,project_id,resource_id,starts_on,ends_on,minutes_per_day,status) values ($1,$2,$3,'2026-12-01','2026-12-10',240,'confirmed')", [A, prj, res]);
+      await q("insert into allocations (business_id,project_id,resource_id,starts_on,ends_on,minutes_per_day,status) values ($1,$2,$3,'2026-12-01','2026-12-04',240,'confirmed')", [A, prj, res]);
       // Staff log and submit 4h; manager approves. Expense likewise.
       await become(raw, "staffA");
       const t = (await q("insert into time_entries (business_id,project_id,user_id,work_date,minutes) values ($1,$2,$3,'2026-12-02',240) returning id", [A, prj, U.staffA])).rows[0].id;

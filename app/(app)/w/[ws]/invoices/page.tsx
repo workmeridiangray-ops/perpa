@@ -44,6 +44,8 @@ async function act(f: FormData) {
       error = e?.message ?? (data?.length ? undefined : "Not allowed.");
     } else if (what === "pay") {
       error = (await supabase.from("payments").insert({ business_id: ws, invoice_id: inv, amount_paise: Math.round(Number(f.get("amount")) * 100), received_on: String(f.get("date")), reference: String(f.get("ref") ?? "") })).error?.message;
+    } else if (what === "credit") {
+      error = (await supabase.from("credit_notes").insert({ business_id: ws, invoice_id: inv, amount_paise: Math.round(Number(f.get("amount")) * 100), reason: String(f.get("reason") ?? "") })).error?.message;
     } else if (what === "dispute") {
       error = (await supabase.from("invoices").update({ disputed: f.get("on") === "1" }).eq("id", inv)).error?.message;
     }
@@ -69,19 +71,22 @@ export default async function Invoices({ params, searchParams }: { params: Promi
       <ErrorNote error={error} />
       <p className="mt-2 text-sm text-muted">Issued: billed {formatINR(sum("billed_paise"))} · collected {formatINR(sum("collected_paise"))} · outstanding {formatINR(sum("outstanding_paise"))}</p>
       <table className={table}>
-        <thead className="bg-canvas text-left text-muted"><tr><th className="p-3">No.</th><th>Status</th><th>Ageing</th><th className="text-right">Billed</th><th className="text-right">Collected</th><th className="text-right">Outstanding</th><th /></tr></thead>
+        <thead className="bg-canvas text-left text-muted"><tr><th className="p-3">No.</th><th>Status</th><th>Ageing</th><th className="text-right">Billed</th><th className="text-right">Collected</th><th className="text-right">Credited</th><th className="text-right">Outstanding</th><th /></tr></thead>
         <tbody>
-          {(rows ?? []).length === 0 && <tr><td colSpan={7} className="p-4 text-muted">No invoices yet.</td></tr>}
+          {(rows ?? []).length === 0 && <tr><td colSpan={8} className="p-4 text-muted">No invoices yet.</td></tr>}
           {(rows ?? []).map((r) => (
             <tr key={r.id} className="border-t border-line align-top">
               <td className="p-3 tabular-nums">{r.number}</td><td>{r.status}{r.disputed ? " · disputed" : ""}</td><td>{r.ageing}</td>
-              <td className="text-right tabular-nums">{formatINR(r.billed_paise)}</td><td className="text-right tabular-nums">{formatINR(r.collected_paise)}</td><td className="text-right tabular-nums">{formatINR(r.outstanding_paise)}</td>
+              <td className="text-right tabular-nums">{formatINR(r.billed_paise)}</td><td className="text-right tabular-nums">{formatINR(r.collected_paise)}</td><td className="text-right tabular-nums">{formatINR(r.credited_paise)}</td><td className="text-right tabular-nums">{formatINR(r.outstanding_paise)}</td>
               <td className="flex flex-wrap gap-1 p-2">
                 {r.status === "draft" && <form action={act}>{h("approved", { inv: r.id })}<button className={ghost}>Approve</button></form>}
                 {r.status === "approved" && <form action={act}>{h("issued", { inv: r.id })}<button className={ghost}>Issue</button></form>}
                 {r.status !== "void" && r.collected_paise === 0 && <form action={act}>{h("void", { inv: r.id })}<button className={ghost}>Void</button></form>}
                 {r.status === "issued" && r.outstanding_paise > 0 && (
                   <form action={act} className="flex gap-1">{h("pay", { inv: r.id })}<input name="amount" type="number" min="0.01" step="0.01" required placeholder="₹" className="w-24 rounded-md border border-line px-2" /><input name="date" type="date" required className="rounded-md border border-line px-1" /><input name="ref" placeholder="Reference" className="w-24 rounded-md border border-line px-2" /><button className={ghost}>Record payment</button></form>)}
+                {r.status === "issued" && r.outstanding_paise > 0 && (
+                  <form action={act} className="flex gap-1">{h("credit", { inv: r.id })}<input name="amount" type="number" min="0.01" step="0.01" required placeholder="Credit ₹" className="w-24 rounded-md border border-line px-2" /><input name="reason" required placeholder="Reason" className="w-28 rounded-md border border-line px-2" /><button className={ghost}>Credit note</button></form>)}
+                <a className={ghost} href={`/w/${ws}/statement?client=${r.client_id}`}>Statement</a>
                 {r.status === "issued" && <form action={act}>{h("dispute", { inv: r.id, on: r.disputed ? "0" : "1" })}<button className={ghost}>{r.disputed ? "Clear dispute" : "Mark disputed"}</button></form>}
               </td>
             </tr>

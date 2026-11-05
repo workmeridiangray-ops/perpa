@@ -27,3 +27,14 @@ describe("safeNext", () => {
     expect(safeNext(null)).toBe("/workspaces");
   });
 });
+
+import { isPublicPath } from "./routing";
+describe("isPublicPath", () => {
+  it("lets self-authenticating API routes and invitation links through the session gate only", () => {
+    expect(isPublicPath("/api/webhooks/payments")).toBe(true);
+    expect(isPublicPath("/invite/abc")).toBe(true);
+    expect(isPublicPath("/portal")).toBe(false);
+    expect(isPublicPath("/platform")).toBe(false);
+    expect(isPublicPath("/w/123/clients")).toBe(false);
+  });
+});

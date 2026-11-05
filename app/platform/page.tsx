@@ -25,6 +25,8 @@ export default async function Platform({ searchParams }: { searchParams: Promise
   if (!user) redirect("/login?next=/platform");
   const { data: staff } = await supabase.from("platform_staff").select("role").eq("user_id", user.id).maybeSingle();
   if (!staff) notFound(); // do not reveal that the area exists
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.currentLevel !== "aal2") redirect("/security?need=platform"); // platform staff must use a second factor
   const canBill = staff.role === "owner" || staff.role === "billing";
   const [{ data: subs }, { data: pv }, { data: audit }] = await Promise.all([
     supabase.from("subscriptions").select("business_id, status, current_period_end, businesses(name), plan_versions(version, monthly_paise, plans(name))"),
@@ -35,6 +37,7 @@ export default async function Platform({ searchParams }: { searchParams: Promise
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Platform administration <span className="text-base font-normal text-muted">· {staff.role}</span></h1>
+      <a className="text-sm underline" href="/platform/ops">Operations console →</a>
       {error && <p role="alert" className="mt-3 text-danger">{error}</p>}
       <h2 className="mt-6 font-medium">Subscriptions</h2>
       <table className="mt-2 w-full border-collapse overflow-hidden rounded-lg border border-line bg-white text-sm">

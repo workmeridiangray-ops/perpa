@@ -13,7 +13,10 @@ async function act(f: FormData) {
     // Only a hash is stored. The link is shown once, and email delivery is a provider integration still to be wired.
     if (!e) note = `/invite/${token}`;
   } else if (what === "revoke") error = (await supabase.rpc("revoke_invitation", { p_invitation: String(f.get("id")) })).error?.message;
-  else if (what === "suspend") error = (await supabase.rpc("suspend_member", { p_membership: String(f.get("id")) })).error?.message;
+  else if (what === "offboard") {
+    const r = await supabase.rpc("offboard_member", { p_membership: String(f.get("id")), p_reassign_to: String(f.get("to")) });
+    error = r.error?.message; if (!r.error) note = "";
+  } else if (what === "suspend") error = (await supabase.rpc("suspend_member", { p_membership: String(f.get("id")) })).error?.message;
   back(`/w/${ws}/team${note ? `?link=${encodeURIComponent(note)}` : ""}`, error);
 }
 
@@ -41,7 +44,9 @@ export default async function Team({ params, searchParams }: { params: Promise<{
           {(ms ?? []).map((m) => (
             <tr key={m.id} className="border-t border-line">
               <td className="p-3">{who.get(m.user_id) ?? m.user_id}</td><td>{m.role}</td><td>{m.status}</td>
-              <td className="p-2">{isOwner && m.status === "active" && <form action={act}>{h("suspend", { id: m.id })}<button className={ghost}>Suspend</button></form>}</td>
+              <td className="flex gap-1 p-2">{isOwner && m.status === "active" && <form action={act}>{h("suspend", { id: m.id })}<button className={ghost}>Suspend</button></form>}
+                {isOwner && m.status === "active" && m.role !== "customer" && (
+                  <form action={act} className="flex gap-1">{h("offboard", { id: m.id })}<select name="to" className="rounded-md border border-line px-1 text-sm">{(ms ?? []).filter((x) => x.id !== m.id && x.status === "active" && x.role !== "customer").map((x) => <option key={x.id} value={x.user_id}>{who.get(x.user_id) ?? x.user_id.slice(0, 6)}</option>)}</select><button className={ghost}>Offboard & reassign</button></form>)}</td>
             </tr>
           ))}
         </tbody>

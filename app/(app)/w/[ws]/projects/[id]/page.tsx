@@ -1,5 +1,8 @@
 import { summarize, type Financials } from "@/lib/rules/profit";
 import { formatINR } from "@/lib/rules/money";
+import { randomUUID } from "node:crypto";
+import { redirect } from "next/navigation";
+import { checkUpload } from "@/lib/rules/uploads";
 import { back, btn, card, db, ErrorNote, ghost, Hidden, input, myRole, table } from "../../lib";
 
 async function act(f: FormData) {
@@ -25,6 +28,30 @@ async function act(f: FormData) {
     const { data, error: e } = await supabase.from("deliverables").insert({ business_id: ws, project_id: id, name: String(f.get("name") ?? "") }).select("id").single();
     error = e?.message;
     if (data) error = (await supabase.from("deliverable_versions").insert({ business_id: ws, deliverable_id: data.id, version: 1 })).error?.message;
+  } else if (what === "upload") {
+    const file = f.get("file");
+    if (!(file instanceof File) || file.size === 0) return back(`/w/${ws}/projects/${id}`, "Choose a file.");
+    const bad = checkUpload({ name: file.name, type: file.type, size: file.size });
+    if (bad) return back(`/w/${ws}/projects/${id}`, bad);
+    const path = `${ws}/${id}/${randomUUID()}.${file.name.split(".").pop()!.toLowerCase()}`;
+    const up = await supabase.storage.from("deliverables").upload(path, file, { contentType: file.type, upsert: false });
+    if (up.error) return back(`/w/${ws}/projects/${id}`, up.error.message);
+    const { data: fr, error: fe } = await supabase.from("files").insert({ business_id: ws, project_id: id, path, mime: file.type, size_bytes: file.size, uploaded_by: user?.id }).select("id").single();
+    if (fe || !fr) return back(`/w/${ws}/projects/${id}`, fe?.message);
+    const { data: d, error: de } = await supabase.from("deliverables").insert({ business_id: ws, project_id: id, name: String(f.get("name") || file.name) }).select("id").single();
+    if (de || !d) return back(`/w/${ws}/projects/${id}`, de?.message);
+    error = (await supabase.from("deliverable_versions").insert({ business_id: ws, deliverable_id: d.id, version: 1, file_id: fr.id })).error?.message;
+  } else if (what === "open") {
+    const { data: fl } = await supabase.from("files").select("path, scan_status").eq("id", String(f.get("file"))).maybeSingle();
+    if (!fl || fl.scan_status !== "clean") return back(`/w/${ws}/projects/${id}`, "This file has not passed malware screening.");
+    const { data: signed, error: se } = await supabase.storage.from("deliverables").createSignedUrl(fl.path, 60);
+    if (se || !signed) return back(`/w/${ws}/projects/${id}`, se?.message);
+    redirect(signed.signedUrl);
+  } else if (what === "template") {
+    const r = await supabase.rpc("apply_template", { p_template: String(f.get("template")), p_project: id });
+    error = r.error?.message;
+  } else if (what === "check") {
+    error = (await supabase.from("check_items").update({ done: true }).eq("id", String(f.get("item"))).select("id")).error?.message;
   } else if (what === "share") {
     error = (await supabase.from("deliverable_versions").update({ shared: true }).eq("id", String(f.get("dv"))).select("id")).error?.message;
   } else if (what === "comment") {
@@ -40,11 +67,15 @@ export default async function Project({ params, searchParams }: { params: Promis
   const supabase = await db();
   const role = await myRole(ws);
   const isMgr = role === "owner" || role === "manager";
+  const [{ data: tpls }, { data: checks }] = await Promise.all([
+    supabase.from("templates").select("id, title").eq("business_id", ws),
+    supabase.from("check_items").select("id, text, done").eq("project_id", id).order("text"),
+  ]);
   const [{ data: p }, { data: crs }, { data: ms }, { data: dvs }, { data: cm }] = await Promise.all([
     supabase.from("projects").select("id, name, status").eq("id", id).maybeSingle(),
     supabase.from("change_requests").select("*").eq("project_id", id).order("created_at", { ascending: false }),
     supabase.from("milestones").select("*").eq("project_id", id).order("due_on"),
-    supabase.from("deliverable_versions").select("id, version, shared, status, comment, deliverables!inner(name, project_id)").eq("deliverables.project_id", id),
+    supabase.from("deliverable_versions").select("id, version, shared, status, comment, file_id, files(scan_status), deliverables!inner(name, project_id)").eq("deliverables.project_id", id),
     supabase.from("comments").select("id, body, internal, created_at").eq("project_id", id).order("created_at", { ascending: false }).limit(20),
   ]);
   if (!p) return <p>Project not found.</p>;
@@ -126,7 +157,11 @@ export default async function Project({ params, searchParams }: { params: Promis
         {(dvs ?? []).map((v) => (
           <li key={v.id} className="flex items-center justify-between p-3">
             <span>{(v.deliverables as unknown as { name: string }).name} v{v.version} · {v.status}{v.comment ? ` — “${v.comment}”` : ""}</span>
-            {!v.shared ? <form action={act}>{form("share", { dv: v.id })}<button className={ghost}>Share with client</button></form> : <span className="text-muted">shared</span>}
+            <span className="flex items-center gap-2">
+              {v.file_id && <><span className="text-muted">file: {(v.files as unknown as { scan_status: string } | null)?.scan_status}</span>
+                {(v.files as unknown as { scan_status: string } | null)?.scan_status === "clean" && <form action={act}>{form("open", { file: v.file_id })}<button className={ghost}>Open</button></form>}</>}
+              {!v.shared ? <form action={act}>{form("share", { dv: v.id })}<button className={ghost}>Share with client</button></form> : <span className="text-muted">shared</span>}
+            </span>
           </li>
         ))}
       </ul>
@@ -135,6 +170,22 @@ export default async function Project({ params, searchParams }: { params: Promis
         <label className="flex-1 text-sm">New deliverable<input name="name" required className={input} /></label>
         <button className={btn}>Add</button>
       </form>
+
+      <form action={act} encType="multipart/form-data" className={card}>
+        {form("upload")}
+        <h3 className="font-medium">Upload a file as a new deliverable</h3>
+        <label className="text-sm">Name<input name="name" className={input} /></label>
+        <label className="text-sm">File (PDF, PNG, JPEG, WebP or CSV, up to 10 MB)<input name="file" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.csv" required className={input} /></label>
+        <button className={btn}>Upload</button>
+        <p className="text-sm text-muted">Files can be shared with the client only after the malware scanner marks them clean.</p>
+      </form>
+
+      <h2 className="mt-8 font-medium">Checklist</h2>
+      <ul className="mt-2 max-w-xl divide-y divide-line rounded-lg border border-line bg-white text-sm">
+        {(checks ?? []).length === 0 && <li className="p-3 text-muted">No checklist. Apply a template below.</li>}
+        {(checks ?? []).map((c) => <li key={c.id} className="flex items-center justify-between p-3"><span className={c.done ? "text-muted line-through" : ""}>{c.text}</span>{!c.done && <form action={act}>{form("check", { item: c.id })}<button className={ghost}>Done</button></form>}</li>)}
+      </ul>
+      {(tpls ?? []).length > 0 && <form action={act} className="mt-3 flex max-w-xl items-end gap-2">{form("template")}<label className="flex-1 text-sm">Apply template<select name="template" className={input}>{(tpls ?? []).map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label><button className={btn}>Apply</button></form>}
 
       <h2 className="mt-8 font-medium">Discussion</h2>
       <ul className="mt-2 max-w-xl space-y-2">
