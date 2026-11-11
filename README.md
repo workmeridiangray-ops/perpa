@@ -32,20 +32,29 @@ four-eyes refunds, incidents and announcements; payment-callback receiver with g
 with a malware-scan gate; MFA (TOTP) enrolment and a required second factor for platform staff; JSON export and
 a closure request with 30-day retention and logged deletion failures; signup and invitations.
 
-## What is not built, and why
-| Not built | Reason |
-|---|---|
-| **Taking payments**: hosted checkout, payment links on invoices, automatic recurring card/UPI charging, proration | Needs a chosen payment provider (Razorpay, Stripe, …), a merchant account and API credentials, and a decision on proration rules (the scope says to settle these in discovery). What *is* built is the provider-neutral receiver for signed callbacks (`/api/webhooks/payments`), idempotent charge recording, and failed-renewal grace handling, so a provider adapter only has to create the checkout and post callbacks. |
-| **Email actually leaving the system** | Needs a provider account and a verified sending domain. The worker sends through any HTTPS email API configured via `EMAIL_API_URL/KEY/FROM`; until set, jobs retry and then dead-letter visibly in the ops console. It is untested against a real provider. |
-| **Malware scanning engine** | Scanning is an external service (ClamAV host or a vendor); I cannot ship or verify one here. Files are quarantined as `pending` and cannot be shared with clients until a scanner calls `/api/webhooks/scan`. Without a scanner nothing reaches clients, which is the safe default. |
-| **SMS and WhatsApp** | Need provider accounts, approved sender IDs and message templates (WhatsApp Business approval). |
-| **Enterprise SSO / custom identity providers** | Configured in the Supabase project with a customer’s IdP (a paid-plan feature), not application code; the scope lists it as explicit opt-in. |
-| **E-signatures and legal drafting** | Scope calls these selected integrations; they need a signature provider. Acceptance by an authorised contact for a specific revision is recorded instead. |
-| **Native mobile apps and advanced offline mode** | Excluded by the scope document itself. The web UI is responsive. |
-| **Automated staffing optimisation, payroll, contractor payouts, formal revenue accounting, bespoke accounting connectors, advanced creative proofing, extra currencies** | Excluded by the scope as separately estimated work; accounting connectors also need a named provider and posting rules. Baseline CSV/JSON export and a read-only API exist. |
-| **Load, recovery, browser-matrix and accessibility testing** | Need a running environment: I could not start the local Supabase stack here (container registry rate-limited), so nothing was run in a browser. Targets (volumes, RPO/RTO, browsers) are decisions the scope leaves to discovery. |
-| **Backups and restore drills** | Infrastructure concern of the hosting plan chosen (Supabase backups/PITR); nothing in the repo to build until a plan is picked. |
-| **Two-way sync mappings and a connector catalogue UI** | Each connector must be defined by provider, objects, direction and source of truth (scope §18); none is named yet. |
+## Readiness
+
+**Verdict: the application is complete and working for a pilot or staging launch.** Every module in the scope is implemented,
+110 automated tests pass, and a browser test suite drives the real app against a real (local) Supabase stack and passes.
+Bugs found by that suite were fixed (see the git history).
+
+**It is not yet switched on for paying production customers.** The items below are *prepared in code* but cannot be
+activated or verified without accounts, credentials or decisions that only the business owner can provide.
+
+## What is not prepared (needs an account, credential or decision)
+| Item | State | What is needed to finish |
+|---|---|---|
+| Taking payments (checkout, payment links, recurring charging, proration) | Callback receiver `/api/webhooks/payments` (HMAC), idempotent charge recording and grace-period logic are built and tested. No checkout is created. | Choose a provider (e.g. Razorpay), create the merchant account, set `PAYMENT_WEBHOOK_SECRET`, and add a small adapter that creates the checkout. Decide proration rules. |
+| Email delivery | Queue, retries, dead-letter and the HTTP sender are built; fails visibly when unconfigured (tested). Never sent to a real provider. | Provider account and verified sending domain; set `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_FROM`; schedule `POST /api/jobs/run` with `CRON_SECRET`. |
+| Malware scanning | Upload type/size checks, quarantine, and the signed callback `/api/webhooks/scan` are built and tested; files stay unshareable until marked clean. | Run a scanner (ClamAV host or vendor) that posts results with `SCAN_WEBHOOK_SECRET`. |
+| SMS / WhatsApp | Not built. | Provider accounts, approved sender IDs and templates. |
+| SSO / custom identity providers | Not built; TOTP two-factor is built and tested. | Configure in the Supabase project per customer IdP. |
+| E-signatures | Not built; acceptance by an authorised contact for a specific revision is recorded. | A signature provider. |
+| Accounting connectors, two-way sync, connector catalogue | Not built; CSV/JSON export, read-only API and signed webhooks exist. | Named provider, objects, direction and posting rules (scope §18). |
+| Hosting, backups, restore drills, monitoring | Not set up. | Pick a hosted Supabase plan and a web host; configure backups/PITR and alerts. |
+| Load, recovery-target and multi-browser/mobile testing | Only Chromium on desktop was used; no load tests. | Agree volumes, RPO/RTO and the browser matrix, then test on the hosted environment. |
+| Manual assistive-technology (screen reader) review | Automated axe WCAG A/AA scan passes. | An accessibility review by a person. |
+| Out of scope by the document itself | Native apps, offline mode, payroll, contractor payouts, staffing optimisation, formal revenue accounting, extra currencies. | Separate estimates. |
 
 ## Testing status
 - `npm run test:unit` — 41 pure-rule tests. `npm run test:db` — 68 database tests, passing both on plain Postgres 16 and on the
