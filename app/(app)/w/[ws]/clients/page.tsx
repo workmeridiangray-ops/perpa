@@ -68,13 +68,13 @@ export default async function Clients({ params, searchParams }: { params: Promis
         <Hidden fields={{ ws }} />
         <label className="flex-1 text-sm">Search<input name="q" defaultValue={q ?? ""} className={input} /></label>
         <button formAction={`/w/${ws}/clients`} formMethod="get" className={ghost}>Filter</button>
-        <input name="name" placeholder="View name" className="w-28 rounded-md border border-line bg-white px-2 py-1.5 text-sm" />
+        <input name="name" placeholder="View name" aria-label="View name" className="w-28 rounded-md border border-line bg-white px-2 py-1.5 text-sm" />
         <button className={ghost}>Save view</button>
       </form>
       {(views ?? []).length > 0 && <p className="mt-2 text-sm">Saved views: {(views ?? []).map((v) => <Link key={v.id} className="mr-2 underline" href={`/w/${ws}/clients?q=${encodeURIComponent((v.params as { q?: string }).q ?? "")}`}>{v.name}</Link>)}</p>}
       <ul className="mt-6 max-w-md divide-y divide-line rounded-lg border border-line bg-white">
         {(clients ?? []).length === 0 && <li className="p-4 text-muted">No clients yet.</li>}
-        {(clients ?? []).map((c) => <li key={c.id} className="p-3">{c.name}{Object.keys((c.custom as object) ?? {}).length > 0 && <span className="block text-xs text-muted">{Object.entries(c.custom as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span>}</li>)}
+        {(clients ?? []).map((c) => <li key={c.id} className="p-3"><Link className="text-brand underline" href={`/w/${ws}/clients/${c.id}`}>{c.name}</Link>{Object.keys((c.custom as object) ?? {}).length > 0 && <span className="block text-xs text-muted">{Object.entries(c.custom as Record<string, unknown>).map(([k, v]) => `${k}: ${v}`).join(" · ")}</span>}</li>)}
       </ul>
       <Link href={`/w/${ws}/clients/export`} className={`${ghost} mt-3 inline-block`}>Export CSV</Link>
       <form action={importClients} className={card}>

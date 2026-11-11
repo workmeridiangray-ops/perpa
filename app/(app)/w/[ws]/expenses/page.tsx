@@ -58,7 +58,7 @@ export default async function Expenses({ params, searchParams }: { params: Promi
               <td className="flex gap-1 p-2">
                 {isMgr && e.status === "submitted" && e.user_id !== user?.id && (<>
                   <form action={act}>{h("approve", { entry: e.id })}<button className={ghost}>Approve</button></form>
-                  <form action={act} className="flex gap-1">{h("reject", { entry: e.id })}<input name="reason" required placeholder="Reason" className="rounded-md border border-line px-2" /><button className={ghost}>Reject</button></form></>)}
+                  <form action={act} className="flex gap-1">{h("reject", { entry: e.id })}<input name="reason" required placeholder="Reason" aria-label="Reason" className="rounded-md border border-line px-2" /><button className={ghost}>Reject</button></form></>)}
                 {isMgr && e.status === "approved" && !e.paid_at && <form action={act}>{h("pay", { entry: e.id })}<button className={ghost}>Mark paid</button></form>}
               </td>
             </tr>
@@ -84,7 +84,7 @@ export default async function Expenses({ params, searchParams }: { params: Promi
               <tr key={c.id} className="border-t border-line">
                 <td className="p-3">{(c.suppliers as unknown as { name: string } | null)?.name}</td><td>{(c.projects as unknown as { name: string } | null)?.name}</td><td>{c.description}</td>
                 <td className="text-right tabular-nums">{formatINR(c.committed_paise)}</td><td className="text-right tabular-nums">{c.actual_paise == null ? "—" : formatINR(c.actual_paise)}</td>
-                <td className="p-2">{c.actual_paise == null && <form action={act} className="flex gap-1">{h("bill", { entry: c.id })}<input name="actual" type="number" min="0" step="0.01" required placeholder="Bill ₹" className="w-24 rounded-md border border-line px-2" /><button className={ghost}>Record bill</button></form>}</td>
+                <td className="p-2">{c.actual_paise == null && <form action={act} className="flex gap-1">{h("bill", { entry: c.id })}<input name="actual" type="number" min="0" step="0.01" required placeholder="Bill ₹" aria-label="Bill ₹" className="w-24 rounded-md border border-line px-2" /><button className={ghost}>Record bill</button></form>}</td>
               </tr>
             ))}
           </tbody>

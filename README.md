@@ -4,8 +4,7 @@ Multi-company ERP for agencies, studios and consultancies, built from the
 *Professional Services Agency ERP SaaS* scope. Next.js + Supabase (Postgres, Auth, RLS).
 
 **Status: every module in the scope has an implementation except the items listed under “What is not built, and why”** (database rules, tests and
-screens). It has not been run in a browser or against hosted Supabase, so treat the UI as built-and-compiled,
-not yet user-tested.
+screens). It has been run in a browser against a local Supabase stack (see Testing status), but not against a hosted project or with real email, payment or scanner providers.
 
 | Scope area | Where |
 |---|---|
@@ -49,9 +48,17 @@ a closure request with 30-day retention and logged deletion failures; signup and
 | **Two-way sync mappings and a connector catalogue UI** | Each connector must be defined by provider, objects, direction and source of truth (scope §18); none is named yet. |
 
 ## Testing status
-109 automated tests pass (pure rules plus database rules on Postgres 16). The Next.js app type-checks and builds, but no
-screen has been exercised in a browser or against real Supabase Auth/PostgREST/Storage, so UI wiring (especially
-storage upload, MFA and the signed-in flows) is unverified.
+- `npm run test:unit` — 41 pure-rule tests. `npm run test:db` — 68 database tests, passing both on plain Postgres 16 and on the
+  real local Supabase stack (migrations apply, RLS and the storage policy work).
+- `npm run test:e2e` — Playwright scripts that drive the running app (`npm run dev`) against local Supabase: sign-up, invitations,
+  estimate → acceptance → project → time/expense approval → invoice → payment → credit note → statement, client portal approvals
+  and tickets, staff-vs-owner visibility, CSV/JSON export, API key, job worker, signed callbacks, file upload + scan gate with a
+  real signed URL, TOTP enrolment for platform staff, capacity/leave, offboarding, and an axe WCAG A/AA scan of the main pages.
+  They assume `npx supabase start` (with `supabase/config.toml` as committed, TOTP on) and the env in `.env.example`
+  plus `SCAN_WEBHOOK_SECRET=scan-secret-0123456789abcdef` and `CRON_SECRET=local-cron-secret-0123456789abcdef`.
+  Dev-mode first-compile reloads can make a first run flaky; re-run once.
+- Still not tested: real email delivery, real payment-provider callbacks, a real malware scanner, load/recovery targets, other
+  browsers (only Chromium was used), mobile viewports, and screen-reader use beyond automated axe checks.
 
 ## Rules enforced in the database (see `supabase/migrations/`)
 - Every business-owned row carries `business_id`; RLS scopes all reads and writes. Composite foreign keys

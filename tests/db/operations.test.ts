@@ -151,7 +151,7 @@ describe("templates, checklists, tickets", () => {
       const t = (await q("insert into templates (business_id,kind,title) values ($1,'review','Launch QA') returning id", [A])).rows[0].id;
       await q("insert into template_items (business_id,template_id,position,text) values ($1,$2,1,'Links work'),($1,$2,2,'Contrast checked')", [A, t]);
       expect((await q("select apply_template($1,$2) as n", [t, prj])).rows[0].n).toBe(2);
-      expect(await fails(q, "select close_project($1)", [prj])).toMatch(/checklist/);
+      expect(await fails(q, "select close_project($1)", [prj])).toBe("cannot close: open checklist items");
       await q("update check_items set done = true where project_id=$1", [prj]);
       expect((await q("select done_by from check_items limit 1")).rows[0].done_by).toBe(U.managerA);
       await q("select close_project($1)", [prj]);

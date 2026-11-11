@@ -63,7 +63,7 @@ export default async function Time({ params, searchParams }: { params: Promise<{
                 {isMgr && e.status === "submitted" && e.user_id !== user?.id && (
                   <>
                     <form action={act}>{hid("approve", { entry: e.id })}<button className={ghost}>Approve</button></form>
-                    <form action={act} className="flex gap-1">{hid("reject", { entry: e.id })}<input name="reason" required placeholder="Reason" className="rounded-md border border-line px-2 text-sm" /><button className={ghost}>Reject</button></form>
+                    <form action={act} className="flex gap-1">{hid("reject", { entry: e.id })}<input name="reason" required placeholder="Reason" aria-label="Reason" className="rounded-md border border-line px-2 text-sm" /><button className={ghost}>Reject</button></form>
                   </>
                 )}
               </td>

@@ -115,8 +115,10 @@ export default async function Project({ params, searchParams }: { params: Promis
               <td className="text-right tabular-nums">{c.deadline_delta_days} d</td>
               <td>{c.status}{c.decision_note ? ` — ${c.decision_note}` : ""}</td>
               <td className="p-2">{isMgr && c.status === "pending" && (
-                <form action={act} className="flex gap-1">{form("decide", { cr: c.id })}<input name="note" placeholder="Note (required to reject)" className="rounded-md border border-line px-2" />
-                  <button name="to" value="approved" className={ghost}>Approve</button><button name="to" value="rejected" className={ghost}>Reject</button></form>)}</td>
+                <div className="flex flex-wrap items-center gap-1">
+                  <form action={act}>{form("decide", { cr: c.id, to: "approved" })}<button className={ghost}>Approve</button></form>
+                  <form action={act} className="flex gap-1">{form("decide", { cr: c.id, to: "rejected" })}<input name="note" required placeholder="Reason to reject" aria-label="Reason to reject" className="rounded-md border border-line px-2" /><button className={ghost}>Reject</button></form>
+                </div>)}</td>
             </tr>
           ))}
         </tbody>
@@ -171,7 +173,7 @@ export default async function Project({ params, searchParams }: { params: Promis
         <button className={btn}>Add</button>
       </form>
 
-      <form action={act} encType="multipart/form-data" className={card}>
+      <form action={act} className={card}>
         {form("upload")}
         <h3 className="font-medium">Upload a file as a new deliverable</h3>
         <label className="text-sm">Name<input name="name" className={input} /></label>

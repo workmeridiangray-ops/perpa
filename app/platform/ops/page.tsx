@@ -62,23 +62,23 @@ export default async function Ops({ searchParams }: { searchParams: Promise<{ er
       <ul className={box}>
         {(refunds ?? []).map((r) => (
           <li key={r.id} className="flex items-center justify-between p-3"><span>{formatINR(r.amount_paise)} · {r.status} · {r.reason}</span>
-            {r.status === "requested" && r.requested_by !== user.id && <form action={act} className="flex gap-1">{hid("decide", { id: r.id })}<button name="to" value="approved" className={btn}>Approve</button><button name="to" value="rejected" className={btn}>Reject</button></form>}</li>))}
+            {r.status === "requested" && r.requested_by !== user.id && <span className="flex gap-1"><form action={act}>{hid("decide", { id: r.id, to: "approved" })}<button className={btn}>Approve</button></form><form action={act}>{hid("decide", { id: r.id, to: "rejected" })}<button className={btn}>Reject</button></form></span>}</li>))}
       </ul>
       <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("refund")}
-        <select name="charge" className={input}>{(charges ?? []).filter((c) => c.status === "succeeded" || c.status === "disputed").map((c) => <option key={c.id} value={c.id}>{c.provider_ref} · {formatINR(c.amount_paise)}</option>)}</select>
-        <input name="amount" type="number" min="0.01" step="0.01" required placeholder="₹" className={input} /><input name="reason" required placeholder="Reason" className={input} /><button className={btn}>Request refund</button></form>
+        <select name="charge" aria-label="Charge" className={input}>{(charges ?? []).filter((c) => c.status === "succeeded" || c.status === "disputed").map((c) => <option key={c.id} value={c.id}>{c.provider_ref} · {formatINR(c.amount_paise)}</option>)}</select>
+        <input name="amount" type="number" min="0.01" step="0.01" required placeholder="₹" aria-label="₹" className={input} /><input name="reason" required placeholder="Reason" aria-label="Reason" className={input} /><button className={btn}>Request refund</button></form>
 
       <h2 className="mt-8 font-medium">Coupons</h2>
       <ul className={box}>{(coupons ?? []).map((c) => <li key={c.id} className="p-3">{c.code} · {c.percent_bps / 100}% · used {c.redeemed}{c.max_redemptions ? `/${c.max_redemptions}` : ""}{c.valid_until ? ` · until ${c.valid_until}` : ""}</li>)}</ul>
-      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("coupon")}<input name="code" required placeholder="CODE" className={input} /><input name="percent" type="number" min="0.01" max="100" step="0.01" required placeholder="% off" className={input} /><input name="until" type="date" className={input} /><input name="max" type="number" min="1" placeholder="Max uses" className={input} /><button className={btn}>Create coupon</button></form>
+      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("coupon")}<input name="code" required placeholder="CODE" aria-label="CODE" className={input} /><input name="percent" type="number" min="0.01" max="100" step="0.01" required placeholder="% off" aria-label="% off" className={input} /><input name="until" type="date" className={input} /><input name="max" type="number" min="1" placeholder="Max uses" aria-label="Max uses" className={input} /><button className={btn}>Create coupon</button></form>
 
       <h2 className="mt-8 font-medium">Incidents</h2>
       <ul className={box}>{(incidents ?? []).map((i) => <li key={i.id} className="flex items-center justify-between p-3"><span>{i.title} · {i.severity} · {i.status}</span>{i.status !== "resolved" && <form action={act}>{hid("resolve", { id: i.id })}<button className={btn}>Resolve</button></form>}</li>)}</ul>
-      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("incident")}<input name="title" required placeholder="What happened" className={input} /><select name="severity" className={input}><option>minor</option><option>major</option><option>critical</option></select><button className={btn}>Open incident</button></form>
+      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("incident")}<input name="title" required placeholder="What happened" aria-label="What happened" className={input} /><select name="severity" aria-label="Severity" className={input}><option>minor</option><option>major</option><option>critical</option></select><button className={btn}>Open incident</button></form>
 
       <h2 className="mt-8 font-medium">Announcements</h2>
       <ul className={box}>{(anns ?? []).map((a) => <li key={a.id} className="p-3">{a.title}{a.ends_at ? ` · until ${new Date(a.ends_at).toLocaleDateString("en-IN")}` : ""}</li>)}</ul>
-      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("announce")}<input name="title" required placeholder="Headline" className={input} /><input name="body" placeholder="Details" className={input} /><input name="ends" type="datetime-local" className={input} /><button className={btn}>Publish</button></form>
+      <form action={act} className="mt-2 flex flex-wrap items-end gap-2">{hid("announce")}<input name="title" required placeholder="Headline" aria-label="Headline" className={input} /><input name="body" placeholder="Details" aria-label="Details" className={input} /><input name="ends" type="datetime-local" className={input} /><button className={btn}>Publish</button></form>
 
       <h2 className="mt-8 font-medium">Platform audit</h2>
       <ul className="mt-2 text-sm text-muted">{(audit ?? []).map((a) => <li key={a.id}>{new Date(a.at).toLocaleString("en-IN")} · {a.action} {a.table_name}</li>)}</ul>

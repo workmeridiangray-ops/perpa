@@ -55,7 +55,7 @@ export default async function Settings({ params, searchParams }: { params: Promi
       </ul>
       <form action={act} className="mt-3 flex max-w-xl flex-wrap items-end gap-2">{h("field")}
         <label className="text-sm">For<select name="entity" className={input}><option value="client">Client</option><option value="project">Project</option></select></label>
-        <label className="text-sm">Key<input name="key" required pattern="[a-z][a-z0-9_]{0,39}" placeholder="gstin" className={input} /></label>
+        <label className="text-sm">Key<input name="key" required pattern="[a-z][a-z0-9_]{0,39}" placeholder="gstin" aria-label="gstin" className={input} /></label>
         <label className="text-sm">Label<input name="label" required className={input} /></label>
         <label className="text-sm">Type<select name="type" className={input}><option>text</option><option>number</option><option>date</option></select></label>
         <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="required" /> Required</label>

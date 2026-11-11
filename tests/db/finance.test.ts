@@ -28,7 +28,7 @@ describe("change control", () => {
     await as("managerA", async (q, raw) => {
       const { prj } = await project(raw);
       await q(tm, [A, prj, U.managerA, "2026-12-01", 60]);
-      expect(await fails(q, "select public.close_project($1)", [prj])).toMatch(/unapproved time/);
+      expect(await fails(q, "select public.close_project($1)", [prj])).toBe("cannot close: unapproved time");
       await q("delete from time_entries where project_id=$1", [prj]);
       await q("select public.close_project($1)", [prj]);
       expect((await q("select status from projects where id=$1", [prj])).rows[0].status).toBe("closed");

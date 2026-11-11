@@ -51,7 +51,7 @@ export default async function Platform({ searchParams }: { searchParams: Promise
                 <td className="p-3">{(s.businesses as unknown as { name: string } | null)?.name ?? s.business_id}</td>
                 <td>{v ? `${v.plans.name} v${v.version} · ${formatINR(v.monthly_paise)}/mo` : "—"}</td><td>{s.status}</td>
                 <td className="p-2">{canBill && <form action={act} className="flex gap-1"><input type="hidden" name="what" value="status" /><input type="hidden" name="b" value={s.business_id} />
-                  <select name="to" defaultValue={s.status} className="rounded-md border border-line px-2 py-1">{["trial", "active", "past_due", "cancelled"].map((x) => <option key={x}>{x}</option>)}</select>
+                  <select name="to" aria-label="Subscription status" defaultValue={s.status} className="rounded-md border border-line px-2 py-1">{["trial", "active", "past_due", "cancelled"].map((x) => <option key={x}>{x}</option>)}</select>
                   <button className="rounded-md border border-line bg-white px-3 py-1 text-sm">Set</button></form>}</td>
               </tr>);
           })}

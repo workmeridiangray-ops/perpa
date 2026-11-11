@@ -50,12 +50,12 @@ export default async function Portal({ searchParams }: { searchParams: Promise<{
                 <div>{(d.deliverables as unknown as { name: string }).name} · version {d.version} · <strong>{d.status.replace("_", " ")}</strong>{d.comment ? ` — “${d.comment}”` : ""}</div>
                 <form action={act} className="mt-1 inline"><input type="hidden" name="what" value="view" /><input type="hidden" name="v" value={d.id} /><button className="text-brand underline">Mark as viewed</button></form>
                 {d.status === "pending" && canApprove && (
-                  <form action={act} className="mt-2 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="what" value="decide" /><input type="hidden" name="v" value={d.id} />
-                    <label className="flex-1 text-sm">Comment (required to request changes)<input name="comment" className={input} /></label>
-                    <button name="to" value="approve" className="rounded-md bg-brand px-3 py-2 text-white">Approve</button>
-                    <button name="to" value="changes" className="rounded-md border border-line bg-white px-3 py-2">Request changes</button>
-                  </form>)}
+                  <div className="mt-2 flex flex-wrap items-end gap-2">
+                    <form action={act}><input type="hidden" name="what" value="decide" /><input type="hidden" name="v" value={d.id} /><input type="hidden" name="to" value="approve" /><button className="rounded-md bg-brand px-3 py-2 text-white">Approve</button></form>
+                    <form action={act} className="flex flex-1 flex-wrap items-end gap-2"><input type="hidden" name="what" value="decide" /><input type="hidden" name="v" value={d.id} /><input type="hidden" name="to" value="changes" />
+                      <label className="flex-1 text-sm">Comment (required to request changes)<input name="comment" className={input} /></label>
+                      <button className="rounded-md border border-line bg-white px-3 py-2">Request changes</button></form>
+                  </div>)}
                 {d.status === "pending" && !canApprove && <p className="text-muted">You can view this proof; an approver on your team needs to decide.</p>}
               </li>
             ))}

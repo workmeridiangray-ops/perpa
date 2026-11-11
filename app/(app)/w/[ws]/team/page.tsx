@@ -46,7 +46,7 @@ export default async function Team({ params, searchParams }: { params: Promise<{
               <td className="p-3">{who.get(m.user_id) ?? m.user_id}</td><td>{m.role}</td><td>{m.status}</td>
               <td className="flex gap-1 p-2">{isOwner && m.status === "active" && <form action={act}>{h("suspend", { id: m.id })}<button className={ghost}>Suspend</button></form>}
                 {isOwner && m.status === "active" && m.role !== "customer" && (
-                  <form action={act} className="flex gap-1">{h("offboard", { id: m.id })}<select name="to" className="rounded-md border border-line px-1 text-sm">{(ms ?? []).filter((x) => x.id !== m.id && x.status === "active" && x.role !== "customer").map((x) => <option key={x.id} value={x.user_id}>{who.get(x.user_id) ?? x.user_id.slice(0, 6)}</option>)}</select><button className={ghost}>Offboard & reassign</button></form>)}</td>
+                  <form action={act} className="flex gap-1">{h("offboard", { id: m.id })}<select name="to" aria-label="Reassign work to" className="rounded-md border border-line px-1 text-sm">{(ms ?? []).filter((x) => x.id !== m.id && x.status === "active" && x.role !== "customer").map((x) => <option key={x.id} value={x.user_id}>{who.get(x.user_id) ?? x.user_id.slice(0, 6)}</option>)}</select><button className={ghost}>Offboard & reassign</button></form>)}</td>
             </tr>
           ))}
         </tbody>

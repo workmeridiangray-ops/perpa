@@ -225,11 +225,11 @@ declare b uuid; problems text[] := '{}';
 begin
   select business_id into b from public.projects where id = p_project;
   if b is null or not app.has_role(b, 'owner', 'manager') then raise exception 'not allowed' using errcode = '42501'; end if;
-  if exists (select 1 from public.change_requests where project_id = p_project and status = 'pending') then problems := problems || 'pending change requests'; end if;
-  if exists (select 1 from public.time_entries where project_id = p_project and status in ('draft', 'submitted')) then problems := problems || 'unapproved time'; end if;
-  if exists (select 1 from public.expenses where project_id = p_project and status in ('draft', 'submitted')) then problems := problems || 'unapproved expenses'; end if;
-  if exists (select 1 from public.invoices where project_id = p_project and status in ('draft', 'approved')) then problems := problems || 'unissued invoices'; end if;
-  if exists (select 1 from public.milestones where project_id = p_project and not done) then problems := problems || 'open milestones'; end if;
+  if exists (select 1 from public.change_requests where project_id = p_project and status = 'pending') then problems := array_append(problems, 'pending change requests'::text); end if;
+  if exists (select 1 from public.time_entries where project_id = p_project and status in ('draft', 'submitted')) then problems := array_append(problems, 'unapproved time'::text); end if;
+  if exists (select 1 from public.expenses where project_id = p_project and status in ('draft', 'submitted')) then problems := array_append(problems, 'unapproved expenses'::text); end if;
+  if exists (select 1 from public.invoices where project_id = p_project and status in ('draft', 'approved')) then problems := array_append(problems, 'unissued invoices'::text); end if;
+  if exists (select 1 from public.milestones where project_id = p_project and not done) then problems := array_append(problems, 'open milestones'::text); end if;
   if array_length(problems, 1) > 0 then raise exception 'cannot close: %', array_to_string(problems, ', '); end if;
   update public.projects set status = 'closed' where id = p_project;
 end $$;

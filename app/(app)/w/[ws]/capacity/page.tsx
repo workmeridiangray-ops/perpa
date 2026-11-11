@@ -15,7 +15,7 @@ async function act(f: FormData) {
   if (what === "resource") {
     const p = pattern();
     if (p === undefined) return back(`/w/${ws}/capacity`, "Weekly pattern needs 7 comma-separated hour values, Monday to Sunday.");
-    error = (await supabase.from("resources").insert({ business_id: ws, name: String(f.get("name") ?? ""), role_label: String(f.get("role") ?? "") || null, daily_capacity_minutes: Math.round(Number(f.get("hours")) * 60), weekly_minutes: p })).error?.message;
+    error = (await supabase.from("resources").insert({ business_id: ws, user_id: String(f.get("user") ?? "") || null, name: String(f.get("name") ?? ""), role_label: String(f.get("role") ?? "") || null, daily_capacity_minutes: Math.round(Number(f.get("hours")) * 60), weekly_minutes: p })).error?.message;
   } else if (what === "book") error = (await supabase.from("allocations").insert({ business_id: ws, project_id: String(f.get("project")), resource_id: String(f.get("resource")), starts_on: String(f.get("from")), ends_on: String(f.get("to")), minutes_per_day: Math.round(Number(f.get("hours")) * 60), status: String(f.get("status")), override_reason: String(f.get("override") ?? "") || null })).error?.message;
   else if (what === "confirm") error = (await supabase.from("allocations").update({ status: "confirmed", override_reason: String(f.get("override") ?? "") || null }).eq("id", String(f.get("id")))).error?.message;
   else if (what === "leave") error = (await supabase.from("leave").insert({ business_id: ws, resource_id: String(f.get("resource")), starts_on: String(f.get("from")), ends_on: String(f.get("to")) })).error?.message;
@@ -37,6 +37,8 @@ export default async function Capacity({ params, searchParams }: { params: Promi
     supabase.from("projects").select("id, name").eq("business_id", ws).eq("status", "active"),
     supabase.from("leave").select("id, resource_id, starts_on, ends_on, status, resources(name)").eq("business_id", ws).order("starts_on", { ascending: false }),
   ]);
+  const { data: mem } = isMgr ? await supabase.from("memberships").select("user_id").eq("business_id", ws).eq("status", "active").neq("role", "customer") : { data: [] };
+  const { data: profs } = (mem ?? []).length ? await supabase.from("profiles").select("id, email, full_name").in("id", (mem ?? []).map((m) => m.user_id)) : { data: [] };
   const resources: Resource[] = (res ?? []).map((r) => ({ id: r.id, dailyMinutes: r.daily_capacity_minutes, weeklyMinutes: r.weekly_minutes }));
   const leave: LeaveT[] = (lv ?? []).map((l) => ({ resourceId: l.resource_id, startsOn: l.starts_on, endsOn: l.ends_on, status: l.status }));
   const bookings: Booking[] = (al ?? []).map((a) => ({ resourceId: a.resource_id, startsOn: a.starts_on, endsOn: a.ends_on, minutesPerDay: a.minutes_per_day, status: a.status as "tentative" | "confirmed" }));
@@ -82,7 +84,7 @@ export default async function Capacity({ params, searchParams }: { params: Promi
               <td className="p-3">{(a.resources as unknown as { name: string } | null)?.name}</td><td>{(a.projects as unknown as { name: string } | null)?.name}</td>
               <td>{a.starts_on}</td><td>{a.ends_on}</td><td className="text-right tabular-nums">{a.minutes_per_day / 60}</td>
               <td><span className={a.status === "confirmed" ? "font-semibold" : "italic text-muted"}>{a.status}</span>{a.override_reason ? ` · override: ${a.override_reason}` : ""}</td>
-              <td className="p-2">{isMgr && a.status === "tentative" && <form action={act} className="flex gap-1"><Hidden fields={{ ws, what: "confirm", id: a.id }} /><input name="override" placeholder="Override reason (if over capacity)" className="rounded-md border border-line px-2" /><button className={ghost}>Confirm</button></form>}</td>
+              <td className="p-2">{isMgr && a.status === "tentative" && <form action={act} className="flex gap-1"><Hidden fields={{ ws, what: "confirm", id: a.id }} /><input name="override" placeholder="Override reason (if over capacity)" aria-label="Override reason (if over capacity)" className="rounded-md border border-line px-2" /><button className={ghost}>Confirm</button></form>}</td>
             </tr>
           ))}
         </tbody>
@@ -93,7 +95,7 @@ export default async function Capacity({ params, searchParams }: { params: Promi
         {(lv ?? []).length === 0 && <li className="p-3 text-muted">No leave recorded.</li>}
         {(lv ?? []).map((l) => (
           <li key={l.id} className="flex items-center justify-between p-3"><span>{(l.resources as unknown as { name: string } | null)?.name} · {l.starts_on} → {l.ends_on} · {l.status}</span>
-            {isMgr && l.status === "requested" && <form action={act} className="flex gap-1"><Hidden fields={{ ws, what: "decide", id: l.id }} /><button name="to" value="approved" className={ghost}>Approve</button><button name="to" value="rejected" className={ghost}>Reject</button></form>}</li>
+            {isMgr && l.status === "requested" && <span className="flex gap-1"><form action={act}><Hidden fields={{ ws, what: "decide", id: l.id, to: "approved" }} /><button className={ghost}>Approve</button></form><form action={act}><Hidden fields={{ ws, what: "decide", id: l.id, to: "rejected" }} /><button className={ghost}>Reject</button></form></span>}</li>
         ))}
       </ul>
       <form action={act} className="mt-3 flex max-w-xl flex-wrap items-end gap-2">
@@ -108,9 +110,10 @@ export default async function Capacity({ params, searchParams }: { params: Promi
         <div className="grid max-w-4xl gap-4 md:grid-cols-2">
           <form action={act} className={card}>{h("resource")}<h2 className="font-medium">Add resource</h2>
             <label className="text-sm">Name<input name="name" required className={input} /></label>
+            <label className="text-sm">Team member (links their time, leave and bookings)<select name="user" className={input}><option value="">Not a system user</option>{(profs ?? []).map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}</select></label>
             <label className="text-sm">Role (matches a cost-rate role)<input name="role" className={input} /></label>
             <label className="text-sm">Capacity hours/day (Mon–Fri)<input name="hours" type="number" min="0" max="24" step="0.25" defaultValue="8" className={input} /></label>
-            <label className="text-sm">Weekly pattern, hours Mon…Sun (optional, part-time)<input name="pattern" placeholder="4,4,4,4,0,0,0" className={input} /></label>
+            <label className="text-sm">Weekly pattern, hours Mon…Sun (optional, part-time)<input name="pattern" placeholder="4,4,4,4,0,0,0" aria-label="4,4,4,4,0,0,0" className={input} /></label>
             <button className={btn}>Add</button></form>
           <form action={act} className={card}>{h("book")}<h2 className="font-medium">Book</h2>
             <label className="text-sm">Resource<select name="resource" required className={input}>{resOpts}</select></label>
