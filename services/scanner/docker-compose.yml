@@ -1,0 +1,30 @@
+# Runs ClamAV (with automatic signature updates) and the scanner worker.
+# Usage: copy .env.example to .env, fill it in, then `docker compose up -d`.
+services:
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 180s   # first start downloads signatures
+  scanner:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      clamav:
+        condition: service_healthy
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      APP_URL: ${APP_URL}
+      SCAN_WEBHOOK_SECRET: ${SCAN_WEBHOOK_SECRET}
+      CLAMD_HOST: clamav
+      CLAMD_PORT: "3310"
+      POLL_SECONDS: ${POLL_SECONDS:-10}
+volumes:
+  clamav-db:

@@ -46,7 +46,7 @@ activated or verified without accounts, credentials or decisions that only the b
 |---|---|---|
 | Taking payments (checkout, payment links, recurring charging, proration) | Callback receiver `/api/webhooks/payments` (HMAC), idempotent charge recording and grace-period logic are built and tested. No checkout is created. | Choose a provider (e.g. Razorpay), create the merchant account, set `PAYMENT_WEBHOOK_SECRET`, and add a small adapter that creates the checkout. Decide proration rules. |
 | Email delivery | Queue, retries, dead-letter and the HTTP sender are built; fails visibly when unconfigured (tested). Never sent to a real provider. | Provider account and verified sending domain; set `EMAIL_API_URL`, `EMAIL_API_KEY`, `EMAIL_FROM`; schedule `POST /api/jobs/run` with `CRON_SECRET`. |
-| Malware scanning | Upload type/size checks, quarantine, and the signed callback `/api/webhooks/scan` are built and tested; files stay unshareable until marked clean. | Run a scanner (ClamAV host or vendor) that posts results with `SCAN_WEBHOOK_SECRET`. |
+| Malware scanning | **Built and tested.** `services/scanner` polls pending files, scans them with ClamAV (clamd INSTREAM) and posts the signed result. Tested end to end with a real clamd, real storage and the real app (EICAR detection, clean files, clamd-down stays pending). Only an EICAR test signature was used here because the signature download was blocked in the test environment. | Deploy `services/scanner/docker-compose.yml` on a host (it pulls the official ClamAV image, which keeps real signatures updated) and set the same `SCAN_WEBHOOK_SECRET` in the app and scanner. |
 | SMS / WhatsApp | Not built. | Provider accounts, approved sender IDs and templates. |
 | SSO / custom identity providers | Not built; TOTP two-factor is built and tested. | Configure in the Supabase project per customer IdP. |
 | E-signatures | Not built; acceptance by an authorised contact for a specific revision is recorded. | A signature provider. |
@@ -59,7 +59,7 @@ activated or verified without accounts, credentials or decisions that only the b
 ## Testing status
 - `npm run test:unit` — 41 pure-rule tests. `npm run test:db` — 68 database tests, passing both on plain Postgres 16 and on the
   real local Supabase stack (migrations apply, RLS and the storage policy work).
-- `npm run test:e2e` — Playwright scripts that drive the running app (`npm run dev`) against local Supabase: sign-up, invitations,
+- `npm run test:e2e` — Playwright scripts (08 also needs a clamd on 127.0.0.1:3310) that drive the running app (`npm run dev`) against local Supabase: sign-up, invitations,
   estimate → acceptance → project → time/expense approval → invoice → payment → credit note → statement, client portal approvals
   and tickets, staff-vs-owner visibility, CSV/JSON export, API key, job worker, signed callbacks, file upload + scan gate with a
   real signed URL, TOTP enrolment for platform staff, capacity/leave, offboarding, and an axe WCAG A/AA scan of the main pages.
